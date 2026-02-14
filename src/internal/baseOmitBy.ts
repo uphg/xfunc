@@ -1,5 +1,5 @@
 import { Key } from '../internal/interfaces'
-import { getSymbols } from './vanilla'
+import { getSymbols } from './getSymbols'
 
 export function baseOmitBy(obj: any, callback: (_value: unknown, _key: Key) => boolean) {
   const result: { [k: Key]: unknown } = {}

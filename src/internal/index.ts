@@ -1,6 +1,5 @@
-export * from './common'
+export * from './constants'
 export * from './interfaces'
-export * from './vanilla'
 export { copyArray } from './copyArray'
 export { toKey } from './toKey'
 export { memoizeCapped } from './memoizeCapped'

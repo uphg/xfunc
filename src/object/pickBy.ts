@@ -1,7 +1,7 @@
 import { isNil } from '../typed/isNil'
 import { Key } from '../internal/interfaces'
-import { getSymbols } from '../internal/vanilla'
-import { basePickBy } from '../internal'
+import { getSymbols } from '../internal/getSymbols'
+import { basePickBy } from '../internal/basePickBy'
 
 /**
  * Creates a new object by picking key-value pairs where the callback returns true.

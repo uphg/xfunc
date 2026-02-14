@@ -1,4 +1,4 @@
-import { MAX_SAFE_INTEGER } from '../internal/common'
+import { MAX_SAFE_INTEGER } from '../internal/constants'
 import { isNumber } from './isNumber'
 
 /**
