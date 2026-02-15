@@ -6,9 +6,10 @@ import { cloneTypedArray } from '../internal/cloneTypedArray'
 import { cloneProperties } from '../internal/cloneProperties'
 import { getPrototypeOf } from '../internal/constants'
 import { isObject } from '../typed/isObject'
+import type { TypedArray } from '../internal/interfaces'
 
-// 使用 Map 作为缓存，性能更好
 type CacheMap = Map<any, any>
+type CtorType<T> = new (...args: any[]) => T
 
 const objectTag = '[object Object]'
 const numberTag = '[object Number]'
@@ -43,27 +44,26 @@ const UNCLONABLE_TYPES = new Set([weakMapTag, weakSetTag, weakRefTag, functionTa
 
 function initTypeObject(value: any): any {
   if (!isObject(value)) return value
-  
+
   const tag = toTypeString(value)
-  
-  // 处理不可克隆类型
+
   if (UNCLONABLE_TYPES.has(tag)) {
-    return value // 返回原引用
+    return value
   }
-  
-  const Ctor = value.constructor
-  
+
+  const Ctor = value.constructor as CtorType<any>
+
   switch (tag) {
     case arrayBufferTag:
-      return cloneArrayBuffer(value)
-      
+      return cloneArrayBuffer(value as ArrayBuffer)
+
     case booleanTag:
     case dateTag:
       return new Ctor(+value)
-      
+
     case dataViewTag:
-      return cloneDataView(value)
-      
+      return cloneDataView(value as DataView)
+
     case float32Tag:
     case float64Tag:
     case int8Tag:
@@ -73,36 +73,37 @@ function initTypeObject(value: any): any {
     case uint8ClampedTag:
     case uint16Tag:
     case uint32Tag:
-      return cloneTypedArray(value)
-      
+      return cloneTypedArray(value as TypedArray)
+
     case numberTag:
     case stringTag:
       return new Ctor(value)
-      
-    case regExpTag:
+
+    case regExpTag: {
+      const regExpValue = value as RegExp
       // ES2021 支持 RegExp 的 dotAll 和 unicode 属性
-      const flags = value.flags || 
-        (value.global ? 'g' : '') +
-        (value.ignoreCase ? 'i' : '') +
-        (value.multiline ? 'm' : '') +
-        (value.dotAll ? 's' : '') + // ES2018
-        (value.unicode ? 'u' : '') +
-        (value.sticky ? 'y' : '')
-      return new RegExp(value.source, flags)
-      
+      const flags = regExpValue.flags || (regExpValue.global ? 'g' : '')
+        + (regExpValue.ignoreCase ? 'i' : '')
+        + (regExpValue.multiline ? 'm' : '')
+        + (regExpValue.dotAll ? 's' : '') // ES2018
+        + (regExpValue.unicode ? 'u' : '')
+        + (regExpValue.sticky ? 'y' : '')
+      return new RegExp(regExpValue.source, flags)
+    }
+
     case mapTag:
       return new Map()
-      
+
     case setTag:
       return new Set()
-      
+
     case arrayTag:
-      return new Ctor(value.length)
-      
+      return new Ctor((value as any[]).length)
+
     case objectTag:
     case argsTag:
       return initCloneObject(value)
-      
+
     default:
       // 对于其他类型，尝试使用构造函数
       try {
@@ -114,41 +115,34 @@ function initTypeObject(value: any): any {
 }
 
 export function cloneDeep<T>(value: T): T {
-  // 处理原始类型
   if (!isObject(value)) return value
-  
-  // 使用 Map 作为缓存，可以存储任意类型的键
+
   const cache: CacheMap = new Map()
-  
-  // 初始化根对象
+
   const root = initTypeObject(value)
   cache.set(value, root)
-  
-  // 使用栈进行深度优先遍历
+
   const stack: Array<[any, any]> = [[value, root]]
-  
+
   while (stack.length) {
     const [source, copy] = stack.pop()! // 使用 pop 而不是 shift 提高性能
     const tag = toTypeString(source)
-    
-    // 跳过不可克隆类型
+
     if (UNCLONABLE_TYPES.has(tag)) continue
-    
-    // 处理 Map 和 Set
+
     if (tag === mapTag || tag === setTag) {
       const iterator = source[Symbol.iterator]()
       let entry = iterator.next()
-      
+
       while (!entry.done) {
         let key: any, value: any
-        
+
         if (tag === mapTag) {
           [key, value] = entry.value
         } else {
           value = entry.value
         }
-        
-        // 处理键
+
         if (tag === mapTag) {
           if (cache.has(key)) {
             key = cache.get(key)
@@ -159,8 +153,7 @@ export function cloneDeep<T>(value: T): T {
             key = newKey
           }
         }
-        
-        // 处理值
+
         if (cache.has(value)) {
           value = cache.get(value)
         } else if (isObject(value)) {
@@ -169,25 +162,24 @@ export function cloneDeep<T>(value: T): T {
           stack.push([value, newValue])
           value = newValue
         }
-        
+
         if (tag === mapTag) {
           copy.set(key, value)
         } else {
           copy.add(value)
         }
-        
+
         entry = iterator.next()
       }
     } else {
-      // 处理普通对象和数组
       const propNames = [
         ...Object.keys(source),
         ...Object.getOwnPropertySymbols(source)
       ]
-      
+
       for (const key of propNames) {
         const value = source[key]
-        
+
         if (cache.has(value)) {
           copy[key] = cache.get(value)
         } else if (isObject(value)) {
@@ -199,14 +191,14 @@ export function cloneDeep<T>(value: T): T {
           copy[key] = value
         }
       }
-      
+
       // ES2021：复制属性的描述符
       cloneProperties(source, copy)
     }
-    
+
     // ES2021：复制原型链
     Object.setPrototypeOf(copy, getPrototypeOf(source))
   }
-  
+
   return root as T
 }
