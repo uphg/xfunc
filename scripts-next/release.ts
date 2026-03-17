@@ -1,13 +1,13 @@
 // @ts-check
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-import * as pico from 'picocolors'
-import * as semver from 'semver'
-import * as enquirer from 'enquirer'
+import fs from 'node:fs'
+import path from 'node:path'
+import pico from 'picocolors'
+import semver from 'semver'
+import enquirer from 'enquirer'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
-import { exec } from './lib/exec.js'
 import { parseArgs } from 'node:util'
+import { exec } from './lib/exec.ts'
 
 const { prompt } = enquirer
 const currentVersion = createRequire(import.meta.url)('../package.json').version
