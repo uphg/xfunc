@@ -4,14 +4,15 @@ import fs from 'fs-extra'
 import { fileURLToPath } from 'url'
 import minimist from 'minimist'
 import pc from 'picocolors'
-import { execaQuiet, handleBuildResult, BUILD_TYPES } from './helpers/exec.js'
-import { createPackageConfig } from './config/package-config.js'
+import { execaQuiet, handleBuildResult } from './lib/exec.ts'
+import { BUILD_TYPES } from './config/build-types.ts'
+import { createPackageConfig } from './config/package-config.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const distDir = path.resolve(__dirname, '../dist')
-const resolve = p => path.resolve(distDir, p)
+const resolve = (p: string) => path.resolve(distDir, p)
 const argv = minimist(process.argv.slice(2))
 
 main(argv)

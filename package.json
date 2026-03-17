@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.13.1",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.js",
+    "build": "node scripts-next/build.ts",
     "build:packages": "node scripts/build-package.js",
     "test": "vitest",
     "test:run": "vitest run",
