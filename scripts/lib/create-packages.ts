@@ -1,10 +1,19 @@
-import { getPackageEntries } from './get-package-entries.js'
 import { mkdirSync, writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { rootDir } from './_root-dir.js'
-import { hyphenate } from './hyphenate.js'
+import { rootDir } from './get-root-dir.ts'
+import { getPackageEntries } from './package-entries.ts'
+import { hyphenate } from './hyphenate.ts'
 
 const npmPackagesDir = join(rootDir, 'npm-packages')
+
+interface TsdownConfigOptions {
+  functionDir: string
+  entryPath: string
+}
+
+interface MetaDocsOptions {
+  functionDir: string
+}
 
 export async function createPackages() {
   const entries = getPackageEntries()
@@ -19,8 +28,10 @@ export async function createPackages() {
   console.log(`Created ${Object.keys(entries).length} package configs`)
 }
 
-export async function createTsdownConfig(functionName, { functionDir, entryPath }) {
-  // Generate tsdown.config.ts content
+export async function createTsdownConfig(
+  functionName: string,
+  { functionDir, entryPath }: TsdownConfigOptions
+) {
   const configContent = `import { defineConfig } from 'tsdown'
 
 export default defineConfig({
@@ -38,20 +49,20 @@ export default defineConfig({
 })
 `
 
-  // Write tsdown.config.ts file
   const configPath = join(functionDir, 'tsdown.config.ts')
   writeFileSync(configPath, configContent)
 
   console.log(`Created config for ${functionName} at ${configPath}`)
 }
 
-export async function createMetaDocs(functionName, { functionDir }) {
-  // Read main package.json to get version
+export async function createMetaDocs(
+  functionName: string,
+  { functionDir }: MetaDocsOptions
+) {
   const mainPackagePath = join(rootDir, 'package.json')
   const mainPackage = JSON.parse(readFileSync(mainPackagePath, 'utf-8'))
   const version = mainPackage.version
   const hyphName = hyphenate(functionName)
-  // Create package.json
   const packageJson = {
     name: `@xfunc/${hyphName}`,
     version,
@@ -80,12 +91,10 @@ export async function createMetaDocs(functionName, { functionDir }) {
     JSON.stringify(packageJson, null, 2)
   )
 
-  // Copy LICENSE file
   const licensePath = join(rootDir, 'LICENSE')
   const licenseContent = readFileSync(licensePath, 'utf-8')
   writeFileSync(join(functionDir, 'LICENSE'), licenseContent)
 
-  // Create README.md
   const readmeContent = `# @xfunc/${hyphName} v${version}
 
 ## Installation

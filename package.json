@@ -4,8 +4,8 @@
   "packageManager": "pnpm@10.13.1",
   "type": "module",
   "scripts": {
-    "build": "node scripts-next/build.ts",
-    "build:packages": "node scripts/build-package.js",
+    "build": "node scripts/build.ts",
+    "build:packages": "node scripts/build-package.ts",
     "test": "vitest",
     "test:run": "vitest run",
     "lint": "eslint . --fix",
@@ -21,9 +21,9 @@
     "publish:minor": "npm version minor && cd dist && npm publish",
     "publish:major": "npm version major && cd dist && npm publish",
     "publish:dry": "cd dist && npm pack --dry-run",
-    "publish-packages": "node scripts/publish-packages.js",
-    "release": "node scripts/release.js",
-    "release:dry": "node scripts/release.js --dry",
+    "publish-packages": "node scripts/publish-packages.ts",
+    "release": "node scripts/release.ts",
+    "release:dry": "node scripts/release.ts --dry",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "devDependencies": {

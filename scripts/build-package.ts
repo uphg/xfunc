@@ -2,10 +2,10 @@ import path from 'path'
 import fs from 'fs-extra'
 import { fileURLToPath } from 'url'
 import pc from 'picocolors'
-import { execaQuiet, handleBuildResult, BUILD_TYPES } from './helpers/exec.js'
-import { createPackages } from './helpers/create-packages.js'
-import { getPackageEntries } from './helpers/get-package-entries.js'
-import { hyphenate } from './helpers/hyphenate.js'
+import { execaQuiet, handleBuildResult } from './lib/exec.ts'
+import { createPackages } from './lib/create-packages.ts'
+import { getPackageEntries } from './lib/package-entries.ts'
+import { hyphenate } from './lib/hyphenate.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -42,7 +42,7 @@ async function run() {
         buildResults.push({ functionName, result })
 
         // 显示构建结果
-        handleBuildResult(result, `@xfunc/${hyphName}`, BUILD_TYPES.TSDOWN.type)
+        handleBuildResult(result, `@xfunc/${hyphName}`, 'bundle built')
       } else {
         console.log(pc.yellow('(!)') + pc.dim(` Config not found for ${functionName}: ${configPath}`))
       }
@@ -65,7 +65,7 @@ async function run() {
       process.exit(1)
     }
   }
-  catch(error) {
+  catch(error: any) {
     console.error(pc.red('✗') + pc.bold(' Build failed: ') + pc.red(error.message))
     if (error.stderr) {
       console.error(pc.red('STDERR:'), error.stderr)

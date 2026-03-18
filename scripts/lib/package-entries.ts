@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
-import { rootDir } from './get-root-dir'
+import { rootDir } from './get-root-dir.ts'
 
 export function getPackageEntries(keySuffix = false): Record<string, string> {
   const srcDir = join(rootDir, 'src')
