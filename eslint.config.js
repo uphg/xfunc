@@ -53,6 +53,7 @@ export default [
       'prefer-spread': 'off',
       'prefer-rest-params': 'off',
       'no-undef': 'off',
+      'no-useless-catch': 'off',
 
       // TypeScript handles function overloads correctly
       'no-redeclare': 'off',

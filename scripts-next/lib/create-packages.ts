@@ -6,6 +6,15 @@ import { hyphenate } from '../../src/index'
 
 const npmPackagesDir = join(rootDir, 'npm-packages')
 
+interface TsdownConfigOptions {
+  functionDir: string
+  entryPath: string
+}
+
+interface MetaDocsOptions {
+  functionDir: string
+}
+
 export async function createPackages() {
   const entries = getPackageEntries()
   for (const [functionName, entryPath] of Object.entries(entries)) {
@@ -19,7 +28,10 @@ export async function createPackages() {
   console.log(`Created ${Object.keys(entries).length} package configs`)
 }
 
-export async function createTsdownConfig(functionName, { functionDir, entryPath }) {
+export async function createTsdownConfig(
+  functionName: string,
+  { functionDir, entryPath }: TsdownConfigOptions
+) {
   const configContent = `import { defineConfig } from 'tsdown'
 
 export default defineConfig({
@@ -43,7 +55,10 @@ export default defineConfig({
   console.log(`Created config for ${functionName} at ${configPath}`)
 }
 
-export async function createMetaDocs(functionName, { functionDir }) {
+export async function createMetaDocs(
+  functionName: string,
+  { functionDir }: MetaDocsOptions
+) {
   const mainPackagePath = join(rootDir, 'package.json')
   const mainPackage = JSON.parse(readFileSync(mainPackagePath, 'utf-8'))
   const version = mainPackage.version

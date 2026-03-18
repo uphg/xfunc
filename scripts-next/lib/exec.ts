@@ -1,14 +1,28 @@
-// @ts-check
 import pico from 'picocolors'
 import { execa } from 'execa'
+import type { SpawnOptions } from 'node:child_process'
 import { spawn } from 'node:child_process'
+
+interface ExecaQuietResult {
+  success: boolean
+  duration: number
+  command: string
+  args: string[]
+  result?: unknown
+  error?: unknown
+}
+
+interface ExecResult {
+  ok: boolean
+  code: number | null
+  stderr: string
+  stdout: string
+}
 
 /**
  * 格式化构建时间显示
- * @param {number} ms - 毫秒数
- * @returns {string} 格式化后的时间字符串
  */
-export function formatBuildTime(ms) {
+export function formatBuildTime(ms: number): string {
   if (ms < 1000) return pico.green(`${ms}ms`)
   if (ms < 5000) return pico.yellow(`${(ms / 1000).toFixed(1)}s`)
   return pico.red(`${(ms / 1000).toFixed(1)}s`)
@@ -16,12 +30,12 @@ export function formatBuildTime(ms) {
 
 /**
  * 静默执行包装器，收集构建信息
- * @param {string} command - 要执行的命令
- * @param {string[]} args - 命令参数
- * @param {object} options - 执行选项
- * @returns {Promise<{success: boolean, duration: number, command: string, args: string[], result?: any, error?: any}>} 构建结果
  */
-export async function execaQuiet(command, args = [], options = {}) {
+export async function execaQuiet(
+  command: string,
+  args: string[] = [],
+  options: Record<string, unknown> = {}
+): Promise<ExecaQuietResult> {
   const startTime = Date.now()
   try {
     const result = await execa(command, args, options)
@@ -36,11 +50,12 @@ export async function execaQuiet(command, args = [], options = {}) {
 
 /**
  * 统一处理构建结果
- * @param {Object} result - 构建结果
- * @param {string} type - 构建类型
- * @param {string} action - 构建动作
  */
-export function handleBuildResult(result, type, action) {
+export function handleBuildResult(
+  result: ExecaQuietResult,
+  type: string,
+  action: string
+): void {
   if (result.success) {
     console.log(pico.green('✓') + pico.dim(` ${type} ${action} in `) + formatBuildTime(result.duration))
   }
@@ -52,12 +67,13 @@ export function handleBuildResult(result, type, action) {
 
 /**
  * 执行命令行指令
- * @param {string} command
- * @param {ReadonlyArray<string>} args
- * @param {object} [options]
  */
-export async function exec(command, args, options) {
-  return new Promise((resolve, reject) => {
+export async function exec(
+  command: string,
+  args: readonly string[],
+  options?: SpawnOptions
+): Promise<ExecResult> {
+  return new Promise<ExecResult>((resolve, reject) => {
     const _process = spawn(command, args, {
       stdio: [
         'ignore', // stdin
@@ -68,10 +84,8 @@ export async function exec(command, args, options) {
       shell: process.platform === 'win32'
     })
 
-    /** @type {Buffer[]} */
-    const stderrChunks = []
-    /** @type {Buffer[]} */
-    const stdoutChunks = []
+    const stderrChunks: Buffer[] = []
+    const stdoutChunks: Buffer[] = []
 
     _process.stderr?.on('data', (chunk) => {
       stderrChunks.push(chunk)

@@ -2,9 +2,9 @@ import { readFileSync, readdirSync } from 'fs'
 import { join } from 'path'
 import { rootDir } from './get-root-dir'
 
-export function getPackageEntries(keySuffix = false) {
+export function getPackageEntries(keySuffix = false): Record<string, string> {
   const srcDir = join(rootDir, 'src')
-  const entries = { }
+  const entries: Record<string, string> = { }
 
   const modules = readdirSync(srcDir, { withFileTypes: true })
     .filter(dirent => dirent.isDirectory())
@@ -33,7 +33,7 @@ export function getPackageEntries(keySuffix = false) {
           }
         }
       }
-    } catch(error) {
+    } catch(error: any) {
       console.warn(`Could not read ${moduleIndexPath}:`, error.message)
     }
   }
