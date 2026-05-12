@@ -63,6 +63,18 @@ function debounce<T extends (...args: any[]) => any>(
     context = undefined
   }
 
+  /**
+   * 立即执行节流函数并重置状态
+   * @returns 执行结果，如果没有等待中的调用则返回 undefined
+   */
+  debounced.flush = (): ReturnType<T> | undefined => {
+    if (timerId && context && args) {
+      result = func.apply(context, args)
+      debounced.cancel()
+    }
+    return result
+  }
+
   return debounced
 }
 

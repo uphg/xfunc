@@ -1,129 +1,125 @@
 interface ThrottleOptions {
+  /** 是否允许在开始立即执行，默认为 true */
   leading?: boolean
+  /** 是否允许在结束后执行，默认为 true */
   trailing?: boolean
 }
 
-interface ThrottledFunction<T extends (...args: any[]) => any> {
-  (...args: Parameters<T>): ReturnType<T>
-  cancel(): void
+interface ThrottledFunction<Fn extends (...args: any[]) => any> {
+  (...args: Parameters<Fn>): ReturnType<Fn>
+  cancel: () => void
+  flush: () => ReturnType<Fn> | undefined
+}
+
+const now = (): number => {
+  if (typeof performance !== 'undefined' && performance.now) {
+    return performance.now()
+  }
+  return Date.now()
 }
 
 /**
- * Creates a throttled function that only invokes the provided function at most once per specified wait period.
- * @param func The function to throttle
- * @param wait The number of milliseconds to throttle invocations to
- * @param options Options object with leading and trailing flags
- * @returns A new throttled function with a cancel method
+ * 创建节流函数
+ * @param func - 要节流的函数
+ * @param wait - 节流间隔时间（毫秒）
+ * @param options - 配置选项
+ * @returns 节流后的增强函数
  *
  * @example
- * const throttledFn = throttle(() => console.log('Hello'), 1000)
- * throttledFn() // Logs 'Hello' immediately
- * throttledFn() // Will not log until 1 second has passed
- * throttledFn.cancel() // Cancels the pending invocation
+ * ```ts
+ * const throttledFn = throttle(
+ *   (value: string) => console.log(value),
+ *   1000
+ * );
+ *
+ * throttledFn('test');
+ * throttledFn.cancel(); // 取消等待中的执行
+ * throttledFn.flush(); // 立即执行等待中的调用
+ * ```
  */
-function throttle<T extends (...args: any[]) => any>(
-  func: T,
+export default function throttle<Fn extends (...args: any[]) => any>(
+  func: Fn,
   wait: number,
-  options?: ThrottleOptions
-): ThrottledFunction<T> {
-  const { leading = true, trailing = true } = options || {}
-
+  options: ThrottleOptions = {}
+): ThrottledFunction<Fn> {
   let timeoutId: ReturnType<typeof setTimeout> | null = null
-  let lastCallTime: number = 0
-  let lastInvokeTime: number = 0
-  let lastArgs: Parameters<T> | undefined
-  let lastThis: ThisParameterType<T> | undefined
-  let result: ReturnType<T>
+  let context: any = null
+  let args: Parameters<Fn> | null = null
+  let result: ReturnType<Fn> | undefined = undefined
+  let previousTime = 0
 
-  function invokeFunc(time: number): ReturnType<T> {
-    const args = lastArgs!
-    const thisArg = lastThis!
-
-    lastArgs = lastThis = undefined
-    lastInvokeTime = time
-    result = func.apply(thisArg, args)
-    return result
-  }
-
-  function leadingEdge(time: number): ReturnType<T> {
-    lastInvokeTime = time
-    timeoutId = setTimeout(timerExpired, wait)
-    return leading ? invokeFunc(time) : result
-  }
-
-  function remainingWait(time: number): number {
-    const timeSinceLastCall = time - lastCallTime
-    const timeSinceLastInvoke = time - lastInvokeTime
-    const timeWaiting = wait - timeSinceLastCall
-
-    return Math.min(timeWaiting, wait - timeSinceLastInvoke)
-  }
-
-  function shouldInvoke(time: number): boolean {
-    const timeSinceLastCall = time - lastCallTime
-    const timeSinceLastInvoke = time - lastInvokeTime
-
-    return (
-      lastCallTime === 0
-      || timeSinceLastCall >= wait
-      || timeSinceLastCall < 0
-      || timeSinceLastInvoke >= wait
-    )
-  }
-
-  function timerExpired(): void {
-    const time = Date.now()
-    if (shouldInvoke(time)) {
-      trailingEdge(time)
-    } else {
-      timeoutId = setTimeout(timerExpired, remainingWait(time))
-    }
-  }
-
-  function trailingEdge(time: number): ReturnType<T> {
+  const later = (): void => {
+    previousTime = options.leading === false ? 0 : now()
     timeoutId = null
+    result = func.apply(context, args ?? [])
 
-    if (trailing && lastArgs) {
-      return invokeFunc(time)
+    // 清理引用，避免内存泄漏
+    if (!timeoutId) {
+      context = null
+      args = null
     }
-    lastArgs = lastThis = undefined
-    return result
   }
 
-  function cancel(): void {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId)
-      timeoutId = null
+  const throttled = function(this: any, ...newArgs: Parameters<Fn>): ReturnType<Fn> | undefined {
+    const currentTime = now()
+
+    // 首次执行且不允许 leading 时，设置 previousTime 为当前时间
+    if (!previousTime && options.leading === false) {
+      previousTime = currentTime
     }
-    lastInvokeTime = 0
-    lastArgs = undefined
-    lastCallTime = 0
-    lastThis = undefined
-  }
 
-  const throttled = function(this: ThisParameterType<T>, ...args: Parameters<T>): ReturnType<T> {
-    const time = Date.now()
-    const isInvoking = shouldInvoke(time)
+    const remainingTime = wait - (currentTime - previousTime)
+    context = this
+    args = newArgs
 
-    lastArgs = args
-    lastThis = this
-    lastCallTime = time
-
-    if (isInvoking) {
-      if (timeoutId === null) {
-        return leadingEdge(lastCallTime)
+    // 检查是否应该立即执行
+    if (remainingTime <= 0 || remainingTime > wait) {
+      // 取消任何等待中的执行
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
       }
-      timeoutId = setTimeout(timerExpired, wait)
-      return leading ? invokeFunc(lastCallTime) : result
+
+      previousTime = currentTime
+      result = func.apply(context, args)
+
+      // 清理引用
+      if (!timeoutId) {
+        context = null
+        args = null
+      }
+    // 设置 trailing 执行
+    } else if (!timeoutId && options.trailing !== false) {
+      timeoutId = setTimeout(later, remainingTime)
     }
-    if (timeoutId === null) {
-      timeoutId = setTimeout(timerExpired, remainingWait(lastCallTime))
+
+    return result
+  }
+
+  /**
+   * 取消任何等待中的节流执行
+   */
+  throttled.cancel = (): void => {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
+    previousTime = 0
+    timeoutId = null
+    context = null
+    args = null
+  }
+
+  /**
+   * 立即执行节流函数并重置状态
+   * @returns 执行结果，如果没有等待中的调用则返回 undefined
+   */
+  throttled.flush = (): ReturnType<Fn> | undefined => {
+    if (timeoutId && context && args) {
+      result = func.apply(context, args)
+      throttled.cancel()
     }
     return result
   }
 
-  throttled.cancel = cancel
-  return throttled
+  return throttled as ThrottledFunction<Fn>
 }
-
-export default throttle
